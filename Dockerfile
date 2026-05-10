@@ -25,14 +25,14 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin s
 
 WORKDIR /app
 
-# Install deps first (cache layer) before copying source.
 COPY pyproject.toml ./
-RUN uv venv --python 3.12 /opt/venv && \
-    . /opt/venv/bin/activate && \
-    uv pip install --python /opt/venv/bin/python .
-
-# Copy source AFTER deps so code edits don't bust the heavy install layer.
 COPY scriber_server/ ./scriber_server/
+
+# BuildKit cache mount keeps uv's wheel cache across rebuilds so source edits
+# don't re-download torch/NeMo (~5 GB).
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv venv --python 3.12 /opt/venv && \
+    uv pip install --python /opt/venv/bin/python .
 
 # Pre-cache the model into the image. Skipped at build time if BUILD_CACHE_MODEL=0.
 ARG BUILD_CACHE_MODEL=1
