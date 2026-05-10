@@ -1,0 +1,35 @@
+services:
+  scriber-server:
+    build:
+      context: .
+      args:
+        # Set to 0 to skip baking the model into the image (smaller image,
+        # but first-run latency moves to the named volume below).
+        BUILD_CACHE_MODEL: "1"
+    image: scriber-server:latest
+    container_name: scriber-server
+    restart: unless-stopped
+    # GPU access — requires nvidia-container-toolkit installed on the host.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    volumes:
+      # Persist the HuggingFace + NeMo model caches so rebuilds don't redownload.
+      - scriber-cache:/cache
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8765/healthz').read(); sys.exit(0)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
+
+volumes:
+  scriber-cache:
