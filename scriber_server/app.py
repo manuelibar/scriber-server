@@ -14,6 +14,7 @@ from .postprocess import pad_audio, postprocess_text
 log = logging.getLogger("scriber-server")
 
 asr = ASR()
+silence_rms_threshold = float(os.getenv("SCRIBER_SILENCE_RMS_THRESHOLD", "0.0005"))
 
 
 @asynccontextmanager
@@ -27,13 +28,17 @@ app = FastAPI(lifespan=lifespan, title="scriber-server")
 
 @app.get("/healthz")
 async def healthz():
+    if asr.load_error:
+        return JSONResponse({"ok": False, "reason": "load_failed", "error": asr.load_error}, status_code=503)
     if not asr.ready:
         return JSONResponse({"ok": False, "reason": "warming up"}, status_code=503)
-    return {"ok": True, "model": asr.model_name}
+    return {"ok": True, "backend": "openai-whisper", "model": asr.model_name, "device": asr.device}
 
 
 @app.post("/transcribe")
 async def transcribe(request: Request):
+    if asr.load_error:
+        raise HTTPException(503, "model load failed: " + asr.load_error)
     if not asr.ready:
         raise HTTPException(503, "warming up")
 
@@ -48,6 +53,9 @@ async def transcribe(request: Request):
         raise HTTPException(400, "body must be int16 PCM (even byte count)")
 
     samples = np.frombuffer(body, dtype=np.int16).astype(np.float32) / 32768.0
+    audio_ms = int(samples.shape[0] / sample_rate * 1000)
+    if float(np.sqrt(np.mean(samples * samples))) < silence_rms_threshold:
+        return {"text": "", "raw": "", "ms": 0, "audio_ms": audio_ms}
     samples = pad_audio(samples, sample_rate, min_seconds=1.0)
 
     t0 = time.monotonic()

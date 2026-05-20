@@ -1,13 +1,13 @@
 [project]
 name = "scriber-server"
 version = "0.1.0"
-description = "FastAPI + NeMo Parakeet speech-to-text backend for scriber"
+description = "FastAPI + OpenAI Whisper speech-to-text backend for scriber"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "numpy>=1.26,<2.3",
-    "nemo_toolkit[asr]>=2.0",
+    "openai-whisper>=20250625",
     "torch>=2.4",
 ]
 

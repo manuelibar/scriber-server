@@ -1,18 +1,20 @@
 # scriber-server
 
-FastAPI + NeMo speech-to-text backend for [scriber](../). Loads `nvidia/parakeet-tdt-0.6b-v2` once and serves a single `/transcribe` endpoint over localhost.
+FastAPI + OpenAI Whisper speech-to-text backend for [scriber](../). Loads a local Whisper model once and serves a single `/transcribe` endpoint over localhost.
 
-## Two install paths
+The client sends raw 16 kHz mono PCM to this server. Users normally do not call the API directly; the Go daemon does that after a hotkey capture.
 
-### Docker (recommended)
+## Docker
 
 ```bash
-docker compose up -d --build
-# first build downloads the model (~600 MB) and bakes it into the image
-docker compose logs -f scriber-server  # follow warm-up
+cd ..
+make services-start
+make logs
 ```
 
-Requires NVIDIA driver + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html). Image exposes port 8765 on `127.0.0.1` only.
+The root Compose stack is the only supported setup path. It starts the server through Docker and exposes port 8765 on `127.0.0.1` only.
+
+Requires NVIDIA driver + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html). The first build downloads the selected Whisper model and can take a while.
 
 To skip baking the model into the image (smaller image, model downloaded into the named volume on first request):
 
@@ -21,34 +23,36 @@ docker compose build --build-arg BUILD_CACHE_MODEL=0
 docker compose up -d
 ```
 
-### Native
-
-Requirements: NVIDIA driver, Python 3.12 (NeMo wheels are unreliable on 3.13/3.14), [`uv`](https://github.com/astral-sh/uv).
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh   # if uv not installed
-uv venv --python 3.12
-uv pip install -e .
-.venv/bin/scriber-server
-```
-
-Or as a systemd user service:
-
-```bash
-cp systemd/scriber-server.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now scriber-server
-journalctl --user -u scriber-server -f
-```
-
 ## API
 
-- `GET /healthz` — `200 {"ok": true}` once the model is warm. `503` during cold start.
+- `GET /healthz` — `200 {"ok": true}` once the model is warm. `503` during cold start or model-load failure.
 - `POST /transcribe` — body: raw int16 little-endian PCM, header `X-Sample-Rate: 16000` (only 16 kHz supported in v1). Returns `{"text": "...", "raw": "...", "ms": 187, "audio_ms": 1000}`.
+
+## Whisper tuning
+
+Environment variables:
+
+```bash
+SCRIBER_WHISPER_MODEL=base.en     # tiny.en, base.en, small.en, medium.en, turbo, etc.
+SCRIBER_WHISPER_DEVICE=auto       # auto, cuda, cpu
+SCRIBER_WHISPER_LANGUAGE=en       # en, auto, or another Whisper language code
+SCRIBER_WHISPER_CACHE_DIR=...     # optional model cache location
+SCRIBER_SILENCE_RMS_THRESHOLD=0.0005
+```
+
+Use `base.en` for the quickest usable setup. Use `small.en` or `turbo` when you want better quality and can spend more VRAM/download time.
+
+After changing environment variables in `.private/.env`, run `make services-start` from the repo root and then `curl http://127.0.0.1:8765/healthz`.
+
+Expected healthy response:
+
+```json
+{"ok":true,"backend":"openai-whisper","model":"base.en","device":"cuda"}
+```
 
 ## Notes
 
-- Single worker, single GPU lock. Concurrent requests serialize.
-- After each request: `torch.cuda.empty_cache()`. `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to reduce fragmentation alongside browsers.
-- Audio shorter than 1.0 s is padded with trailing silence (Parakeet's punctuation/casing model wants context).
+- Single worker, single model lock. Concurrent requests serialize.
+- After each CUDA request: `torch.cuda.empty_cache()`. `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to reduce fragmentation alongside browsers.
+- Audio shorter than 1.0 s is padded with trailing silence.
 - Post-processing: capitalize first letter, append `.` if no terminal punctuation and ≥ 2 words.

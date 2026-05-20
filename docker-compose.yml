@@ -21,8 +21,13 @@ services:
       - "127.0.0.1:8765:8765"
     environment:
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+      SCRIBER_WHISPER_MODEL: base.en
+      SCRIBER_WHISPER_DEVICE: auto
+      SCRIBER_WHISPER_LANGUAGE: en
+      SCRIBER_WHISPER_CACHE_DIR: /cache/whisper
+      SCRIBER_SILENCE_RMS_THRESHOLD: "0.0005"
     volumes:
-      # Persist the HuggingFace + NeMo model caches so rebuilds don't redownload.
+      # Persist Whisper model caches so rebuilds don't redownload.
       - scriber-cache:/cache
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8765/healthz').read(); sys.exit(0)\""]
