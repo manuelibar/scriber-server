@@ -14,11 +14,10 @@ The root Compose stack is the only supported setup path. It starts the server th
 
 Requires NVIDIA driver + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html). The first build downloads the selected Whisper model and can take a while.
 
-To skip baking the model into the image (smaller image, model downloaded into the named volume on first request):
+To skip baking the model into the image, set `BUILD_CACHE_MODEL=0` in `.private/.env` from the repo root. That keeps the image smaller and downloads the model into the named volume on first request:
 
 ```bash
-docker compose build --build-arg BUILD_CACHE_MODEL=0
-docker compose up -d
+stt start --no-daemon
 ```
 
 ## API
@@ -37,6 +36,8 @@ SCRIBER_WHISPER_LANGUAGE=en       # en, auto, or another Whisper language code
 SCRIBER_WHISPER_CACHE_DIR=...     # optional model cache location
 SCRIBER_SILENCE_RMS_THRESHOLD=0.0005
 ```
+
+The root `.private/.env` uses `STT_WHISPER_MODEL`, `STT_WHISPER_DEVICE`, `STT_WHISPER_LANGUAGE`, and `STT_SILENCE_RMS_THRESHOLD`; the Compose file maps those values into the server container as `SCRIBER_*` variables.
 
 Use `base.en` for the quickest usable setup. Use `small.en` or `turbo` when you want better quality and can spend more VRAM/download time.
 
