@@ -14,6 +14,8 @@ The root Compose stack is the only supported setup path. It starts the server th
 
 Requires NVIDIA driver + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html). The first build downloads the selected Whisper model and can take a while.
 
+The root setup script installs Docker's official Engine packages, the Compose plugin, buildx, and NVIDIA Container Toolkit. The image creates an `app` user with UID/GID 10001 and runs the server as that user. Compose mounts `/cache` as the writable Whisper model volume, mounts `/tmp` as tmpfs, drops Linux capabilities, prevents privilege escalation, and keeps the runtime root filesystem read-only.
+
 To skip baking the model into the image, set `BUILD_CACHE_MODEL=0` in `.private/.env` from the repo root. That keeps the image smaller and downloads the model into the named volume on first request:
 
 ```bash
@@ -37,7 +39,7 @@ SCRIBER_WHISPER_CACHE_DIR=...     # optional model cache location
 SCRIBER_SILENCE_RMS_THRESHOLD=0.0005
 ```
 
-The root `.private/.env` uses `STT_WHISPER_MODEL`, `STT_WHISPER_DEVICE`, `STT_WHISPER_LANGUAGE`, and `STT_SILENCE_RMS_THRESHOLD`; the Compose file maps those values into the server container as `SCRIBER_*` variables.
+The root `.private/.env` uses `STT_WHISPER_MODEL`, `STT_WHISPER_DEVICE`, `STT_WHISPER_LANGUAGE`, `STT_SILENCE_RMS_THRESHOLD`, `STT_SERVER_HOST`, `STT_SERVER_PORT`, `STT_GPU_COUNT`, and `BUILD_CACHE_MODEL`; the Compose file maps the server-specific values into the container as `SCRIBER_*` variables.
 
 Use `base.en` for the quickest usable setup. Use `small.en` or `turbo` when you want better quality and can spend more VRAM/download time.
 
