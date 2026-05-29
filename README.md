@@ -7,9 +7,7 @@ The client sends raw 16 kHz mono PCM to this server. Users normally do not call 
 ## Docker
 
 ```bash
-cd ..
-make services-start
-make logs
+stt start --no-daemon
 ```
 
 The root Compose stack is the only supported setup path. It starts the server through Docker and exposes port 8765 on `127.0.0.1` only.
@@ -42,7 +40,7 @@ SCRIBER_SILENCE_RMS_THRESHOLD=0.0005
 
 Use `base.en` for the quickest usable setup. Use `small.en` or `turbo` when you want better quality and can spend more VRAM/download time.
 
-After changing environment variables in `.private/.env`, run `make services-start` from the repo root and then `curl http://127.0.0.1:8765/healthz`.
+After changing environment variables in `.private/.env`, run `stt start --no-daemon` and then `curl http://127.0.0.1:8765/healthz`.
 
 Expected healthy response:
 

@@ -31,10 +31,9 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY scriber_server/ ./scriber_server/
 
-# BuildKit cache mount keeps uv's wheel cache across rebuilds so source edits
-# don't re-download torch/Whisper dependencies.
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv venv --python 3.12 /opt/venv && \
+# Keep this compatible with classic Docker builders; not every host has the
+# buildx plugin needed for BuildKit cache mounts.
+RUN uv venv --python 3.12 /opt/venv && \
     uv pip install --python /opt/venv/bin/python .
 
 # Pre-cache the model into the image. Skipped at build time if BUILD_CACHE_MODEL=0.
@@ -44,4 +43,4 @@ RUN if [ "$BUILD_CACHE_MODEL" = "1" ]; then \
     fi
 
 EXPOSE 8765
-CMD ["/opt/venv/bin/python", "-m", "scriber_server.app"]
+CMD ["/opt/venv/bin/python", "-m", "uvicorn", "scriber_server.app:app", "--host", "0.0.0.0", "--port", "8765", "--workers", "1", "--limit-concurrency", "4"]
