@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     HOME=/tmp \
     XDG_CACHE_HOME=/cache \
     PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-    SCRIBER_WHISPER_MODEL=base.en \
+    SCRIBER_WHISPER_MODEL=base \
     SCRIBER_WHISPER_DEVICE=auto \
     SCRIBER_WHISPER_LANGUAGE=en \
     SCRIBER_SILENCE_RMS_THRESHOLD=0.0005 \
@@ -44,7 +44,7 @@ RUN uv venv --python 3.12 /opt/venv && \
 # Pre-cache the model into the image. Skipped at build time if BUILD_CACHE_MODEL=0.
 ARG BUILD_CACHE_MODEL=1
 RUN if [ "$BUILD_CACHE_MODEL" = "1" ]; then \
-        /opt/venv/bin/python -c "import os, whisper; whisper.load_model(os.environ.get('SCRIBER_WHISPER_MODEL', 'base.en'), download_root=os.environ.get('SCRIBER_WHISPER_CACHE_DIR'))" ; \
+        /opt/venv/bin/python -c "import os, whisper; whisper.load_model(os.environ.get('SCRIBER_WHISPER_MODEL', 'base'), download_root=os.environ.get('SCRIBER_WHISPER_CACHE_DIR'))" ; \
     fi && \
     chown -R app:app /cache
 

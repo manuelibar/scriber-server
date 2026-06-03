@@ -97,16 +97,18 @@ class ASR:
         if self.device == "cuda":
             torch.cuda.empty_cache()
 
-    async def transcribe(self, samples: np.ndarray) -> str:
+    async def transcribe(self, samples: np.ndarray, language: str | None = "") -> str:
         async with self._lock:
             loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(None, self._transcribe_sync, samples)
+            return await loop.run_in_executor(None, self._transcribe_sync, samples, language)
 
-    def _transcribe_sync(self, samples: np.ndarray) -> str:
+    def _transcribe_sync(self, samples: np.ndarray, language: str | None = "") -> str:
+        if language == "":
+            language = self.language
         with torch.no_grad():
             out = self.model.transcribe(
                 samples,
-                language=self.language,
+                language=language,
                 task="transcribe",
                 fp16=self.device == "cuda",
                 verbose=False,
