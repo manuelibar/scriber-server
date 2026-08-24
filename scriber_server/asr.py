@@ -31,7 +31,7 @@ def _extract_text(out: Any, no_speech_threshold: float = 0.6) -> str:
 
 class ASR:
     def __init__(self, model_name: str | None = None):
-        self.model_name = model_name or os.getenv("SCRIBER_WHISPER_MODEL", "base.en")
+        self.model_name = model_name or os.getenv("SCRIBER_WHISPER_MODEL", "medium")
         self.language = os.getenv("SCRIBER_WHISPER_LANGUAGE", "en")
         if self.language.lower() == "auto":
             self.language = None
